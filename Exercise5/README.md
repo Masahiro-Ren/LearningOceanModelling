@@ -3,5 +3,5 @@
 ## Secnario 1 Dam break
 ![image info](../images/dam_break.gif)
 
-## Secnario 2 Dam break
+## Secnario 2 Wave paddle 
 ![image info](../images/wave_paddle.gif)
