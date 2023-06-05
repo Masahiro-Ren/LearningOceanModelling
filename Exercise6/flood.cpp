@@ -7,12 +7,13 @@
 
 /**
  * MODE 1 for Island scenario
- * MODE 2 for Hillside with depressio9n scenario
+ * MODE 2 for Hillside with depression scenario
 */
 const static int MODE = 1;
 
 const static double dt = 0.1;
 const static double dx = 10.0;
+const static double length = 1000.0;
 const static double g = 9.81;
 const static double h_min = 0.1;
 const static double eps = 0.05; // for shapiro filter
@@ -24,6 +25,13 @@ std::vector<double> _eta;
 std::vector<double> u;
 std::vector<bool> wet;
 
+bool equal(const double& a, const double& b)
+{
+    double relative_difference_factor = 0.0001;
+    double greater_magnitude = std::max(std::abs(a), std::abs(b));
+    return std::abs(a - b) < relative_difference_factor * greater_magnitude;
+}
+
 void parse(std::ifstream& infile, std::vector<double>& array)
 {
     std::string delimiter = ",";
@@ -31,14 +39,13 @@ void parse(std::ifstream& infile, std::vector<double>& array)
     while(std::getline(infile, values))
     {
         if(values.empty()) break;
-        size_t pos = 0;
-        while((pos = values.find(delimiter)) != std::string::npos)
+        std::stringstream ss(values);
+        std::string tmp;
+        while(std::getline(ss, tmp, ','))
         {
-            double val = std::stod(values.substr(0, pos));
+            double val = std::stod(tmp);
             array.push_back(val);
-            values.erase(0, pos + delimiter.length());
         }
-        array.push_back(std::stod(values));
     }
 }
 
@@ -49,11 +56,11 @@ void Load(const std::string& path)
     std::string name = "";
     while(std::getline(infile, name))
     {
-        if(name == "h_zero")
+        if(name == "hzero")
         {
             parse(infile, h_zero);
         }
-        if(name == "eta")
+        if (name == "eta")
         {
             parse(infile, eta);
         }
@@ -69,21 +76,50 @@ void Init()
         data_path = ".\\input\\scenario2.dat";
     Load(data_path);
 
+    std::size_t n = h_zero.size();
+
+    for(int k = 0; k < n; k++)
+    {
+        _eta[k] = eta[k];
+        h[k] = h_zero[k] + eta[k];
+        // wet = 0 defines dry grid cells
+        // wet = 1 defines wet grid cells
+        wet[k] = h[k] < h_min ? 0 : 1;
+        u[k] = 0.0;
+    }
 }
 
-void Calculate()
+void Dynamic(double time, std::vector<std::vector<double>>& Result)
 {
-
+    int ntot = static_cast<int>(length / dx);
+    double _time = 0.0;
+    
+    while(!equal(time, _time))
+    {
+        _time += dt;
+        // Predict velocity for wet grid cells
+        for(int k = 1; k <= ntot; k++)
+        {
+            double pgradx = -g * ( eta[k + 1] - eta[k] ) / dx;
+            if(wet[k])
+            {
+                if(wet[k + 1] || pgradx > 0) u[k] += dt * pgradx;
+            }
+            else
+            {
+                if(wet[k + 1] && pgradx < 0) u[k] += dt * pgradx;
+            }
+        }
+        // Predict sea level
+        for(int k = 1; k <= ntot; k++)
+        {
+            // TODO
+        }
+    }
 }
 
 int main()
 {
     Init();
-    for(const auto& val : h_zero)
-        std::cout << val << " ";
-    std::cout << std::endl;
-    for(const auto& val : eta)
-        std::cout << val << " ";
-    std::cout << std::endl;
     return 0;
 }

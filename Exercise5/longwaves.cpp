@@ -75,7 +75,7 @@ void Init()
     }
 }
 
-void Calculate(double time, std::vector<std::vector<double>>& Result)
+void Dynamic(double time, std::vector<std::vector<double>>& Result)
 {
     double _time = 0.0;
     int ntot = length / dx;
@@ -141,7 +141,7 @@ int main()
     {
         std::cout << "check CFL condition... OK. \n";
         std::vector<std::vector<double>> Result;
-        Calculate(20, Result);
+        Dynamic(20, Result);
         Output(Result);
     }
     else
