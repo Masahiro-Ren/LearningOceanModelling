@@ -23,7 +23,7 @@ std::vector<double> h;
 std::vector<double> eta;
 std::vector<double> _eta;
 std::vector<double> u;
-std::vector<bool> wet;
+std::vector<int> wet;
 
 bool equal(const double& a, const double& b)
 {
@@ -80,17 +80,18 @@ void Init()
 
     for(int k = 0; k < n; k++)
     {
-        _eta[k] = eta[k];
-        h[k] = h_zero[k] + eta[k];
+        _eta.push_back(eta[k]);
+        h.push_back((h_zero[k] + eta[k]));
         // wet = 0 defines dry grid cells
         // wet = 1 defines wet grid cells
-        wet[k] = h[k] < h_min ? 0 : 1;
-        u[k] = 0.0;
+        wet.push_back((h[k] < h_min ? 0 : 1));
+        u.push_back(0.0);
     }
 }
 
 void Dynamic(double time, std::vector<std::vector<double>>& Result)
 {
+    std::size_t n = h_zero.size();
     int ntot = static_cast<int>(length / dx);
     double _time = 0.0;
     
@@ -101,25 +102,96 @@ void Dynamic(double time, std::vector<std::vector<double>>& Result)
         for(int k = 1; k <= ntot; k++)
         {
             double pgradx = -g * ( eta[k + 1] - eta[k] ) / dx;
-            if(wet[k])
+            if(wet[k] == 1)
             {
-                if(wet[k + 1] || pgradx > 0) u[k] += dt * pgradx;
+                if(wet[k + 1] == 1 || pgradx > 0) u[k] += dt * pgradx;
             }
             else
             {
-                if(wet[k + 1] && pgradx < 0) u[k] += dt * pgradx;
+                if(wet[k + 1] == 1 && pgradx < 0) u[k] += dt * pgradx;
             }
         }
         // Predict sea level
         for(int k = 1; k <= ntot; k++)
         {
             // TODO
+            double uk_plus = 0.5 * ( u[k] + std::fabs(u[k]) );
+            double uk_minus = 0.5 * ( u[k] - std::fabs(u[k]) );
+            double ukk_plus = 0.5 * ( u[k - 1] + std::fabs(u[k - 1]) );
+            double ukk_minus = 0.5 * ( u[k - 1] - std::fabs(u[k - 1]) );
+            _eta[k] = eta[k] - dt * ( uk_plus * h[k] + uk_minus * h[k + 1] -
+                                        ukk_plus * h[k - 1] - ukk_minus * h[k] ) / dx;
         }
+        // One order shapiro filter
+        for(int k = 1; k <= ntot; k++)
+        {
+            if(wet[k] == 1)
+            {
+                eta[k] = ( 1 - 0.5 * eps * ( wet[k + 1] + wet[k - 1] ) ) * _eta[k] +
+                            0.5 * eps * ( wet[k + 1] * _eta[k + 1] + wet[k - 1] * _eta[k - 1]);
+            }
+            else
+            {
+                eta[k] = _eta[k];
+            }
+        }
+        // Update h and wet
+        for(int k = 0; k < n; k++)
+        {
+            h[k] = h_zero[k] + eta[k];
+            wet[k] = ( h[k] < h_min ) ? 0 : 1;
+        }
+        Result.push_back(eta);
+        // std::cout << "Time step : " << _time << std::endl;
     }
+}
+
+void Output(std::vector<std::vector<double>>& Result)
+{
+    std::string filename = "Unknown_senario.dat";
+    double sea_lv = 0.0;
+    if(MODE == 1)
+    {
+        filename = "island.dat";
+        sea_lv = 10.0;
+    }
+    if(MODE == 2)
+    {
+        filename = "hillside.dat";
+        sea_lv = 0.0;
+    }
+
+   std::ofstream file(filename);
+   if(file.is_open()) 
+   {
+        int mask = 0;
+        std::size_t lsize = Result[0].size();
+        for(auto& line : Result)
+        {
+            // just for reduce the data size
+            if(mask % 2 == 0)
+            {
+                int k = 0;
+                file << line[k] << ",";
+                for( k = 1; k <= lsize - 2; k++)
+                {
+                    file << sea_lv + line[k] << ",";
+                }
+                file << line[k + 1];
+                file << std:: endl;
+            }
+            mask++;
+        }
+        file.close();
+        std::cout << "Output " << filename << " Done. \n";
+   }
 }
 
 int main()
 {
+    std::vector<std::vector<double>> Result;
     Init();
+    Dynamic(200, Result);
+    Output(Result);
     return 0;
 }

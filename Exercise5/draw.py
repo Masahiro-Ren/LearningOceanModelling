@@ -11,7 +11,7 @@ ax.set_xlabel("Channel Length (1000m)")
 ax.set_xticklabels([])
 ax.set_title("Long Waves in a Channel")
 
-waves = np.loadtxt(sys.path[0] + "\\wave_paddle.dat", delimiter=',')
+waves = np.loadtxt(sys.path[0] + "\\dam_break.dat", delimiter=',')
 x = np.arange(0, 102, 1)
 
 
@@ -24,6 +24,6 @@ def update(tick) :
 
 ani = Animation.FuncAnimation(fig, update, frames=200, interval=30)
 # Save animation to gif
-# ani.save(sys.path[0] + "\\wave_paddle.gif", dpi=300, writer='pillow')
+ani.save(sys.path[0] + "\\dam_break.gif", dpi=300, writer='pillow')
 
 plt.show()

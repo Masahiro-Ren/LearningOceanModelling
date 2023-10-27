@@ -8,7 +8,7 @@
  * MODE 1 : Dam break;
  * MODE 2 : Wave paddle;
 */
-const static int MODE = 2;
+const static int MODE = 1;
 
 // parameters for calculation
 const static double dt = 0.1;
@@ -99,7 +99,7 @@ void Dynamic(double time, std::vector<std::vector<double>>& Result)
             double ukk_plus = 0.5 * ( u[k - 1] + std::fabs(u[k - 1]) );
             double ukk_minus = 0.5 * ( u[k - 1] - std::fabs(u[k - 1]) );
             _eta[k] = eta[k] - dt * ( uk_plus * h[k] + uk_minus * h[k + 1] - 
-                                        ukk_plus * h[k - 1] - ukk_minus * h[k]);
+                                        ukk_plus * h[k - 1] - ukk_minus * h[k]) / dx;
         }
         // first-order shapiro filter
         for(int k = 1; k <= ntot; k++)
